@@ -3,7 +3,7 @@ FROM python:3.12-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     HOST=0.0.0.0 \
-    PORT=3000 \
+    PORT=5055 \
     GENOMA_DATA_DIR=/data \
     CHROME_PATH=/usr/bin/chromium
 
@@ -29,6 +29,9 @@ COPY GENOMA_NINOS3_extracted ./GENOMA_NINOS3_extracted
 
 RUN mkdir -p /data/uploads
 
-EXPOSE 3000
+EXPOSE 5055
 
-CMD ["python", "-u", "genoma_app/app.py"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\", \"5055\")}/health', timeout=3).read()"
+
+CMD ["python", "genoma_app/app.py"]
