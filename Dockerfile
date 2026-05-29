@@ -31,7 +31,4 @@ RUN mkdir -p /data/uploads
 
 EXPOSE 3000
 
-HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=6 \
-    CMD python -c "import os, urllib.request; urllib.request.urlopen(f'http://127.0.0.1:{os.environ.get(\"PORT\", \"3000\")}/health', timeout=3).read()"
-
-CMD ["python", "genoma_app/app.py"]
+CMD ["python", "-u", "genoma_app/app.py"]

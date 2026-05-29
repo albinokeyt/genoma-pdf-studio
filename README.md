@@ -17,6 +17,8 @@ App web para cargar informes PDF de microbiota, validar datos extraidos y genera
 7. Agregar volumen persistente:
    - `/data`
 
+Si EasyPanel muestra "waiting for service to start", revisa que el puerto interno sea `3000` y no `5055`.
+
 ## Actualizaciones
 
 Cada cambio enviado a GitHub puede redesplegarse desde EasyPanel. Si EasyPanel tiene auto deploy activo, el despliegue se dispara al hacer push.
