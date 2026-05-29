@@ -1,0 +1,17 @@
+services:
+  genoma-app:
+    build: .
+    container_name: genoma-app
+    restart: unless-stopped
+    ports:
+      - "5055:5055"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5055
+      GENOMA_DATA_DIR: /data
+      CHROME_PATH: /usr/bin/chromium
+    volumes:
+      - genoma_data:/data
+
+volumes:
+  genoma_data:

@@ -1,0 +1,9 @@
+{
+  "shigella": "no_detectado",
+  "salmonella": "no_detectado",
+  "campylobacter": "no_detectado",
+  "rotavirus": "no_detectado",
+  "astrovirus": "no_detectado",
+  "norovirus": "no_detectado",
+  "helicobacter": "detectado_medio"
+}

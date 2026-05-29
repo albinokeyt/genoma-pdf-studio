@@ -1,0 +1,74 @@
+{
+  "actinobacteria": {
+    "patient": "",
+    "reference": ""
+  },
+  "firmicutes": {
+    "patient": "",
+    "reference": ""
+  },
+  "bacteroidetes": {
+    "patient": "",
+    "reference": ""
+  },
+  "proteobacterias": {
+    "patient": "",
+    "reference": ""
+  },
+  "microbiota_protectora": {
+    "patient": "",
+    "reference": ""
+  },
+  "bacterias_inmunoestimulantes_beneficiosas": {
+    "patient": "",
+    "reference": ""
+  },
+  "b_productoras_facilitadora_de_mucina": {
+    "patient": "",
+    "reference": ""
+  },
+  "bacterias_formadoras_de_butirato": {
+    "patient": "",
+    "reference": ""
+  },
+  "patogenos_oportunistas": {
+    "patient": "",
+    "reference": ""
+  },
+  "m_proinflamatoria_potencialmente_perjudicial": {
+    "patient": "",
+    "reference": ""
+  },
+  "m_productora_de_h2s": {
+    "patient": "",
+    "reference": ""
+  },
+  "m_productora_de_histamina": {
+    "patient": "",
+    "reference": ""
+  },
+  "m_productora_de_tma_y_tmao": {
+    "patient": "",
+    "reference": ""
+  },
+  "m_productores_de_amoniaco": {
+    "patient": "",
+    "reference": ""
+  },
+  "m_productora_de_fenoles": {
+    "patient": "",
+    "reference": ""
+  },
+  "m_productores_de_acidos_biliares_secundarios": {
+    "patient": "",
+    "reference": ""
+  },
+  "m_productora_de_sulfato_de_indoxilo": {
+    "patient": "",
+    "reference": ""
+  },
+  "marcadores_de_patogenicidad_y_resistencia": {
+    "patient": "",
+    "reference": ""
+  }
+}

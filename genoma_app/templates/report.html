@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Genoma - reporte preliminar</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+  <div class="toolbar">
+    <form method="get">
+      <label>PDF <input name="pdf" value="{{ pdf }}"></label>
+      <label>Excel <input name="xlsx" value="{{ xlsx }}"></label>
+      <button type="submit">Procesar</button>
+      <button type="button" onclick="window.print()">Exportar PDF</button>
+    </form>
+  </div>
+
+  <main class="report">
+    <section class="page home">
+      <img class="bg" src="{{ url_for('assets', filename=fondo) }}" alt="">
+      <header class="header">
+        <img class="logo" src="{{ url_for('assets', filename=logo) }}" alt="Genoma">
+        <div class="address">
+          Av. Principal C.C. Guataparo Express, Nivel planta baja, Local 17 y 22,<br>
+          Urb. Colinas de Guataparo Nro. 201-130, Valencia Edo. Carabobo<br>
+          Contacto: 0424-451.06.32
+        </div>
+      </header>
+
+      <div class="patient-line">
+        <span>Fecha: {{ patient.get('Fecha de muestra', '') }}</span>
+        <span>C.I V-</span>
+        <span>Sex: {{ patient.get('Sexo', '') }}</span>
+        <span>Nombre: {{ patient.get('Nombre', '') }}</span>
+        <span>Fecha de Nacimiento: {{ patient.get('Fecha de nacimiento', '') }}</span>
+      </div>
+
+      <div class="section-title">RESULTADOS PRINCIPALES</div>
+      <table class="main-table">
+        <thead>
+          <tr>
+            <th>NAME OF RESEARCH</th>
+            <th>RESULT</th>
+            <th>REFERENCE INTERVAL</th>
+            <th>UNIT MEASUREMENTS</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in page1_rows %}
+          <tr>
+            <td>{{ row.name }}</td>
+            <td>{{ row.result }}</td>
+            <td>{{ row.reference }}</td>
+            <td>{{ row.unit }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="disclaimer">
+        IMPORTANT: the interpretation of the results must be made strictly by the attending physician
+      </div>
+      <footer class="footer">
+        <div>* Lg X values are given - means 10 X<br>** the value of the proportion of the number of metabolically active bifidobacteria is indicated</div>
+        <img src="{{ url_for('assets', filename=firma) }}" alt="">
+      </footer>
+    </section>
+
+    <section class="page intro">
+      <img class="bg" src="{{ url_for('assets', filename=fondo) }}" alt="">
+      <header class="header">
+        <img class="logo" src="{{ url_for('assets', filename=logo) }}" alt="Genoma">
+        <div class="address">
+          Av. Principal C.C. Guataparo Express, Nivel planta baja, Local 17 y 22,<br>
+          Urb. Colinas de Guataparo Nro. 201-130, Valencia Edo. Carabobo<br>
+          Contacto: 0424-451.06.32
+        </div>
+      </header>
+
+      <div class="patient-line">
+        <span>Fecha: {{ patient.get('Fecha de muestra', '') }}</span>
+        <span>Sex: {{ patient.get('Sexo', '') }}</span>
+        <span>Nombre: {{ patient.get('Nombre', '') }}</span>
+        <span>Fecha de Nacimiento: {{ patient.get('Fecha de nacimiento', '') }}</span>
+      </div>
+
+      <div class="section-title">INTRODUCCION Y CONSIDERACIONES</div>
+      <div class="observation-box">
+        <h2>Lectura automatica del bloque de observaciones</h2>
+        <p>{{ observation }}</p>
+        <h2>Consideraciones</h2>
+        <p>
+          Este bloque queda editable en la siguiente iteracion. Aqui se puede cargar una plantilla medica,
+          recomendaciones nutricionales y objetivos por fase, manteniendo el formato del Power BI.
+        </p>
+      </div>
+    </section>
+
+    <section class="page pr1">
+      <img class="bg" src="{{ url_for('assets', filename=fondo) }}" alt="">
+      <div class="wide-title">ANALISIS GENETICO MOLECULAR DEL MICROBIOMA</div>
+
+      <div class="grid two">
+        <article class="panel">
+          <h2>PROPIEDADES DE LAS HECES</h2>
+          <p>Descripcion macroscopica y microscopica pendiente de captura manual o formulario.</p>
+        </article>
+        <article class="panel">
+          <h2>NUMERO DE TAXONES</h2>
+          <div class="metric">{{ metrics.diversity or '-' }}</div>
+        </article>
+      </div>
+
+      <div class="wide-title small">EQUILIBRIO METABOLICO INTESTINAL</div>
+      <div class="bullet-list">
+        {% for row in bullets %}
+        <div class="bullet-row">
+          <div class="bullet-name">{{ row.name }}</div>
+          <div class="bullet-track">
+            {% set pct = (row.relative or 0) * 100 if row.relative is not none else (row.value or 0) * 10 %}
+            <span style="width: {{ [pct, 100]|min }}%"></span>
+          </div>
+          <div class="bullet-value">
+            {% if row.relative is not none %}{{ '%.1f'|format(row.relative * 100) }}%{% elif row.value is not none %}{{ row.value }}{% else %}-{% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="grid three">
+        <article class="ratio-card">
+          <h3>Firmicutes / Bacteroidetes</h3>
+          <strong>{{ metrics.firm_bact }}</strong>
+          <span>Reference Value: 1.5 - 2.5</span>
+        </article>
+        <article class="ratio-card">
+          <h3>Actinobacteria / Proteobacteria</h3>
+          <strong>{{ metrics.actino_proteo }}</strong>
+          <span>Reference Value &gt; 1.0</span>
+        </article>
+        <article class="ratio-card">
+          <h3>Prevotella / Bacteroides</h3>
+          <strong>{{ metrics.prev_bacteroides }}</strong>
+          <span>Reference Value: 0.1 - 1.0</span>
+        </article>
+      </div>
+
+      <div class="wide-title small">DATOS EXTRAIDOS PARA VALIDACION</div>
+      <table class="mini-table">
+        <thead>
+          <tr><th>Microorganismo</th><th>Valor</th><th>Relativo</th><th>Categoria</th></tr>
+        </thead>
+        <tbody>
+          {% for row in page2_rows[:18] %}
+          <tr>
+            <td>{{ row.name }}</td>
+            <td>{{ row.value if row.value is not none else '-' }}</td>
+            <td>{% if row.relative is not none %}{{ '%.2f'|format(row.relative * 100) }}%{% else %}-{% endif %}</td>
+            <td>{{ row.category }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </section>
+  </main>
+</body>
+</html>
