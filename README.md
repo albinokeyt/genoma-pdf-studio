@@ -8,10 +8,10 @@ App web para cargar informes PDF de microbiota, validar datos extraidos y genera
 2. Seleccionar este repositorio.
 3. Elegir build con `Dockerfile`.
 4. Usar `Dockerfile` como ruta del Dockerfile.
-5. Exponer el puerto `5055`.
+5. Exponer el puerto `3000`.
 6. Configurar variables:
    - `HOST=0.0.0.0`
-   - `PORT=5055`
+   - `PORT=3000`
    - `GENOMA_DATA_DIR=/data`
    - `CHROME_PATH=/usr/bin/chromium`
 7. Agregar volumen persistente:

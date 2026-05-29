@@ -4,10 +4,10 @@ services:
     container_name: genoma-app
     restart: unless-stopped
     ports:
-      - "5055:5055"
+      - "3000:3000"
     environment:
       HOST: 0.0.0.0
-      PORT: 5055
+      PORT: 3000
       GENOMA_DATA_DIR: /data
       CHROME_PATH: /usr/bin/chromium
     volumes:
