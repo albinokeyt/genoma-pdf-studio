@@ -762,16 +762,16 @@ def line_text(words: list[dict[str, Any]]) -> str:
     return clean_text(" ".join(w["text"] for w in words))
 
 
-def is_not_detected_text(value: Any) -> bool:
-    text = norm(clean_text(value))
+def is_invalid_text(value: Any) -> bool:
+    text = clean_text(value).lower()
     if not text:
         return False
-    return bool(re.search(r"\b(?:not|no)\s+detect(?:ed|ado|ada|d)?\b", text))
+    return bool(re.search(r"\binv(?:a|á)lid(?:o|a)?\b", text))
 
 
 def display_result_value(value: Any) -> str:
     text = clean_text(value)
-    return "0" if is_not_detected_text(text) else text
+    return "no detectado" if is_invalid_text(text) else text
 
 
 def extract_observation_from_page(page: pdfplumber.page.Page) -> str:
@@ -808,7 +808,7 @@ def flatten_page1_tables(page: pdfplumber.page.Page) -> list[dict[str, str]]:
 def split_result_line(line: str) -> dict[str, str] | None:
     line = clean_text(line)
     match = re.match(
-        r"^(?P<name>.+?)\s+(?P<rest>Not assessed at this age|not detected|detected|[><≥≤]?\s*-?\d.+|-.*)$",
+        r"^(?P<name>.+?)\s+(?P<rest>(?:Not assessed at this age|not detected|detected|inv(?:a|á)lid(?:o|a)?)(?:\s+.*)?|[><≥≤]?\s*-?\d.+|-.*)$",
         line,
         flags=re.I,
     )
@@ -818,7 +818,7 @@ def split_result_line(line: str) -> dict[str, str] | None:
     rest = clean_text(match.group("rest"))
     result = ""
     remaining = ""
-    for phrase in ["Not assessed at this age", "not detected", "detected"]:
+    for phrase in ["Not assessed at this age", "not detected", "detected", "invalid", "invalido", "invalida", "inválido", "inválida"]:
         if rest.lower().startswith(phrase.lower()):
             result = phrase
             remaining = clean_text(rest[len(phrase) :])
@@ -872,13 +872,11 @@ def parse_page1_text(page1_text: str) -> list[dict[str, str]]:
     return rows
 
 
-NUM_RE = re.compile(r"(?:[<>>=≤≥]\s*)?-?\d+(?:[.,]\d+)?|-|(?:not|no)\s+detect(?:ed|ado|ada|d)?|detected", re.I)
+NUM_RE = re.compile(r"(?:[<>>=≤≥]\s*)?-?\d+(?:[.,]\d+)?|-|(?:not|no)\s+detect(?:ed|ado|ada|d)?|detected|inv(?:a|á)lid(?:o|a)?", re.I)
 
 
 def number_or_none(value: str) -> float | None:
     value = clean_text(value).replace(",", ".")
-    if is_not_detected_text(value):
-        return 0.0
     value = value.replace(">", "").replace("<", "").replace("≥", "").replace("≤", "")
     value = value.replace("*", "").replace("↘", "").replace("↗", "").strip()
     if value == "-":
