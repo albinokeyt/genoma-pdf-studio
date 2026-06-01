@@ -163,6 +163,7 @@ DEFAULT_CLINICAL_SETTINGS = {
     "enterotype_number": "1",
     "enterotype_name": "Proteolítico",
     "enterotype_text": "El paciente es del grupo 1. Proteolítico.",
+    "metabolic_balance_text": "DISBIOSIS PROTEOLÍTICA.",
     "stool_macro": "• pH: Alcalina.\n• Color: Marrón\n• Consistencia: Duras\n• Restos de alimentos presente.",
     "stool_micro": "- Parásitos: No se observaron formas parasitarias.\n- Blastosporas (levaduras): No observadas.\n- Pseudohifas: No observadas.",
 }
@@ -617,7 +618,7 @@ YEAST_NAMES = [
 
 YEAST_STATUSES = [
     ("no_evaluado", "No evaluado"),
-    ("debil", "Debil"),
+    ("debil", "Débil"),
     ("moderada", "Moderada"),
     ("elevado", "Elevado"),
 ]
@@ -1094,11 +1095,16 @@ def final_page1_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
 
     def row(name: str, label: str | None = None, bold: bool = False) -> dict[str, str]:
         source = lookup.get(name, {})
+        result = display_result_value(source.get("result", ""))
+        reference = source.get("reference", "")
+        if norm(result) == norm("Not assessed at this age"):
+            result = "no detectado"
+            reference = "Not assessed at this age"
         return {
             "kind": "row bold" if bold else "row",
             "name": label or name,
-            "result": display_result_value(source.get("result", "")),
-            "reference": source.get("reference", ""),
+            "result": result,
+            "reference": reference,
             "unit": source.get("unit", ""),
         }
 
@@ -1241,7 +1247,7 @@ def phylum_total(rows: list[dict[str, Any]], phylum: str) -> float:
     return sum(
         float(row["relative"])
         for row in rows
-        if (row.get("category_pg1") or row.get("category")) == phylum and isinstance(row.get("relative"), (int, float))
+        if row.get("category_pg1") == phylum and isinstance(row.get("relative"), (int, float))
     )
 
 
@@ -1259,7 +1265,7 @@ def category_absolute_total(rows: list[dict[str, Any]], category: str) -> float:
 
 
 def phylum_absolute_total(rows: list[dict[str, Any]], phylum: str) -> float:
-    return absolute_pool(rows, [row["name"] for row in rows if (row.get("category_pg1") or row.get("category")) == phylum])
+    return absolute_pool(rows, [row["name"] for row in rows if row.get("category_pg1") == phylum])
 
 
 def detail_row(rows_map: dict[str, dict[str, Any]], name: str) -> str:
@@ -1344,9 +1350,9 @@ def detail_table(rows: list[dict[str, Any]], groups: list[dict[str, Any]], *, su
             ("1.Actinobacteria", "Actinobacteria"),
             ("2.Firmicutes", "Firmicutes"),
             ("3.Bacteroidetes", "Bacteroidetes"),
-            ("Fusobacteria", "Fusobacteria"),
-            ("Verrucomicrobia", "Verrumicrobia"),
-            ("Proteo Bacterias", "Proteobacteria"),
+            ("4.Fusobacteria", "Fusobacteria"),
+            ("5.Verrumicrobia", "Verrumicrobia"),
+            ("6.Proteo Bacterias", "Proteobacteria"),
             ("Otros", "Otros"),
         ]
         summary_rows = []
@@ -1360,9 +1366,8 @@ def detail_table(rows: list[dict[str, Any]], groups: list[dict[str, Any]], *, su
                 relative_value = row_value(rows, "Akkermansia muciniphila", "relative") or 0
                 absolute_value = absolute_pool(rows, ["Akkermansia muciniphila"])
             if label == "Proteobacteria":
-                proteo_names = ["Desulfovibrio spp", "E.coli", "Enterobacterales", "Pseudomonas spp"]
-                relative_value = sum(row_value(rows, n, "relative") or 0 for n in proteo_names)
-                absolute_value = absolute_pool(rows, proteo_names)
+                relative_value = phylum_total(rows, "6.Proteo Bacterias")
+                absolute_value = phylum_absolute_total(rows, "6.Proteo Bacterias")
             if label == "Otros":
                 relative_value = row_value(rows, "Methanobrevibacter spp", "relative") or 0
                 absolute_value = absolute_pool(rows, ["Methanobrevibacter spp"])
@@ -1567,7 +1572,7 @@ def build_extra_pages(data: ExtractedReport, fondo: str, logo: str) -> str:
     act = pct_text(phylum_total(rows, "1.Actinobacteria"))
     firm = pct_text(phylum_total(rows, "2.Firmicutes"))
     bact = pct_text(phylum_total(rows, "3.Bacteroidetes"))
-    prot = pct_text(sum(row_value(rows, n, "relative") or 0 for n in ("Desulfovibrio spp", "E.coli", "Enterobacterales", "Pseudomonas spp")))
+    prot = pct_text(phylum_total(rows, "6.Proteo Bacterias"))
     protect = pct_text(sum(row_value(rows, n, "relative") or 0 for n in ("Bifidobacterium spp", "Faecalibacterium prausnitzii", "Akkermansia muciniphila", "Lactobacillaceae")))
     opportun = pct_text(category_total(rows, "5.OPPORTUNISTIC PATHOGENS"))
     candida = pct_text(row_value(rows, "Candida spp", "relative"))
@@ -1631,9 +1636,9 @@ def build_extra_pages(data: ExtractedReport, fondo: str, logo: str) -> str:
     )
     page8 = f"""
       <div class="range-logo"><img src="{asset_url(logo)}" alt=""></div>
-      <div class="yeast-legend"><b>MICOBIOMA</b><span class="box weak"></span>Debil<span class="box ok"></span>Moderada<span class="box high"></span>Elevado</div>
+      <div class="yeast-legend"><b>MICOBIOMA</b><span class="box weak"></span>Débil<span class="box ok"></span>Moderada<span class="box high"></span>Elevado</div>
       <div class="yeast-list">{yeast_rows}</div>
-      <div class="range-legend"><span class="box weak"></span>Bajo<span class="box ok"></span>Optimo<span class="box high"></span>Elevado</div>
+      <div class="range-legend"><span class="box weak"></span>Bajo<span class="box ok"></span>Óptimo<span class="box high"></span>Elevado</div>
       {range_section("ACTINOBACTERIAS", ["Bifidobacterium spp", "Metabolically active bifidobacteria species, proportion", 'Metabolically active "infant" bifidobacteria **', "Bifidobacterium longum subsp. infantis"], rows_map, 2)}
     """
 
@@ -1707,6 +1712,8 @@ def build_html(
     clinical_settings = load_clinical_settings()
     stool_macro_html = lines_to_html(clinical_settings.get("stool_macro"))
     stool_micro_html = lines_to_html(clinical_settings.get("stool_micro"))
+    diversity_value = metric_float(metrics.get("diversity")) or 0
+    diversity_marker = max(0, min((diversity_value / 20) * 100, 100))
     firm_value = phylum_total(data.page2_rows, "2.Firmicutes") or named_total(data.page2_rows, FIRMICUTES_NAMES)
     bact_value = phylum_total(data.page2_rows, "3.Bacteroidetes") or named_total(data.page2_rows, BACTEROIDETES_NAMES)
     bifido_value = row_value(data.page2_rows, "Bifidobacterium spp", "value")
@@ -1916,11 +1923,11 @@ def build_html(
         <div><b>Descripción microscópica</b><br>{stool_micro_html}</div>
       </div>
 
-      <div class="legend-bar"><b>DIVERSIDAD TAXONOMICA</b><span class="swatch lime"></span>Muy bajo<span class="swatch yellow"></span>Bajo<span class="swatch green"></span>Optimo</div>
+      <div class="legend-bar diversity-legend"><b>DIVERSIDAD TAXONÓMICA</b><span class="swatch lime"></span>Muy bajo (0-5)<span class="swatch yellow"></span>Bajo (5-13)<span class="swatch green"></span>Óptimo (13-20)</div>
       <div class="taxa-row">
         <span>Diversity, number of taxa:</span>
         <strong>{h((metrics.get('diversity') or '-').split()[0])}</strong>
-        <div class="range"><span class="lime"></span><span class="yellow"></span><span class="green"></span><i style="left:60%"></i></div>
+        <div class="range diversity-range"><span class="lime"></span><span class="yellow"></span><span class="green"></span><i style="left:{diversity_marker:.2f}%"></i></div>
       </div>
       <p class="center-copy">La diversidad bacteriana es un buen indicador de la salud intestinal. Una mayor diversidad suele estar asociada con una mejor salud digestiva y un mejor sistema inmunológico. Puede disminuir en respuesta a terapias con antibióticos, infecciones, la edad, las dietas desequilibradas o el tabaquismo.</p>
 
@@ -1928,7 +1935,7 @@ def build_html(
       <p class="copy">El microbioma intestinal esta dividido en tres grupos bacterianos dominantes, asociados con diferentes perfiles metabólicos y funciones en el organismo. Enterotipo 1 Enterotipo 2 Enterotipo 3. {h(clinical_settings.get('enterotype_text', ''))}</p>
       <div class="enterotype-box">{h(clinical_settings.get('enterotype_number', '1'))}</div>
 
-      <div class="legend-bar"><b>MICROBIOTA BENEFICA</b><span class="swatch lime"></span>Muy bajo<span class="swatch yellow"></span>Bajo<span class="swatch green"></span>Optimo</div>
+      <div class="legend-bar"><b>MICROBIOTA BENÉFICA</b><span class="swatch lime"></span>Muy bajo<span class="swatch yellow"></span>Bajo<span class="swatch green"></span>Óptimo</div>
       <div class="taxa-row normal">
         <span>NORMAL MICROBIOTA</span>
         <strong>{h(metrics.get('normal_microbiota'))}</strong>
@@ -1936,7 +1943,7 @@ def build_html(
       </div>
       <p class="copy">La proporcion bacteriana en el tracto intestinal puede variar considerablemente de persona a persona. Este indicativo refleja el equilibrio cuantitativo de una microbiota benefica y una microbiota potencialmente patogena.</p>
 
-      <div class="pr-bar metabolic"><span>EQUILIBRIO METABÓLICO INTESTINAL</span><span>*DISBIOSIS PROTEOLITICA.</span></div>
+      <div class="pr-bar metabolic"><span>EQUILIBRIO METABÓLICO INTESTINAL</span><span>*{h(clinical_settings.get('metabolic_balance_text', 'DISBIOSIS PROTEOLÍTICA.'))}</span></div>
       <div class="ratio-strip">
         {comparison_card(metrics.get('firm_bact'), 'Firmicutes / Bacteroidetes', 'Reference Value: 1.5 - 2.5', 'Firmicutes', firm_value, 'Bacteroidetes', bact_value, value_kind='percent')}
         {comparison_card(metrics.get('actino_proteo'), 'Actinobacteria / Proteobacteria', 'Reference Value > 1.0', 'Bifidobacterium spp', bifido_value, 'Enterobacterales', entero_value, value_kind='lg', scale=9)}
@@ -2443,6 +2450,9 @@ def build_clinical_html(saved: bool = False) -> str:
         <label class="clinical-textarea-label">Texto que aparecerá en el informe
           <textarea name="enterotype_text" spellcheck="true">{h(settings.get('enterotype_text', ''))}</textarea>
         </label>
+        <label class="clinical-textarea-label clinical-single-line">Descripción del equilibrio metabólico
+          <input name="metabolic_balance_text" value="{h(settings.get('metabolic_balance_text', ''))}" placeholder="DISBIOSIS PROTEOLÍTICA.">
+        </label>
         <div class="settings-meta clinical-subtitle">
           <strong>Propiedades de las heces</strong>
           <span>Estos textos se imprimen en la página de análisis genético molecular.</span>
@@ -2756,6 +2766,7 @@ class Handler(BaseHTTPRequestHandler):
                     "enterotype_number": params.get("enterotype_number", ["1"])[0],
                     "enterotype_name": params.get("enterotype_name", [""])[0],
                     "enterotype_text": params.get("enterotype_text", [""])[0].replace("\r\n", "\n"),
+                    "metabolic_balance_text": params.get("metabolic_balance_text", [""])[0],
                     "stool_macro": params.get("stool_macro", [""])[0].replace("\r\n", "\n"),
                     "stool_micro": params.get("stool_micro", [""])[0].replace("\r\n", "\n"),
                 })

@@ -1145,6 +1145,12 @@ body {
   letter-spacing: .2px;
 }
 
+.legend-bar.diversity-legend {
+  grid-template-columns: 1fr 28px 76px 28px 72px 28px 86px;
+  gap: 5px;
+  font-size: 9.5px;
+}
+
 .swatch {
   height: 14px;
   border: 1px solid rgba(42, 95, 54, .32);
@@ -1192,6 +1198,7 @@ body {
 }
 
 .range span { display: block; }
+.range.diversity-range { grid-template-columns: 25% 40% 35%; }
 .range i {
   position: absolute;
   top: -2px;
@@ -2036,6 +2043,20 @@ body {
 
 .clinical-textarea-label textarea {
   min-height: 130px;
+}
+
+.clinical-single-line {
+  margin-top: 14px;
+}
+
+.clinical-single-line input {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid #c8d8cd;
+  border-radius: 7px;
+  background: #fff;
+  color: #203326;
+  font: 14px Arial, Helvetica, sans-serif;
 }
 
 .clinical-subtitle {
