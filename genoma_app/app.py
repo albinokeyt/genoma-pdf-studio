@@ -1033,6 +1033,7 @@ def calculate_metrics(rows: list[dict[str, Any]]) -> dict[str, str]:
         "prev_bacteroides": div(prev, bacteroides),
         "diversity": clean_text(next((r["raw"] for r in rows if norm(r["name"]) == norm("Diversity, number of taxa:")), "")),
         "normal_microbiota": fmt_number(row_value(rows, "NORMAL MICROBIOTA", "relative"), percent=True),
+        "total_bacterial_mass": fmt_number(row_value(rows, "Total bacterial mass", "value")),
     }
 
 
@@ -1714,6 +1715,10 @@ def build_html(
     stool_micro_html = lines_to_html(clinical_settings.get("stool_micro"))
     diversity_value = metric_float(metrics.get("diversity")) or 0
     diversity_marker = max(0, min((diversity_value / 20) * 100, 100))
+    normal_microbiota_value = metric_float(metrics.get("normal_microbiota")) or 0
+    normal_microbiota_marker = max(0, min(normal_microbiota_value, 100))
+    total_bacterial_mass_value = metric_float(metrics.get("total_bacterial_mass")) or 0
+    total_bacterial_mass_marker = max(0, min((total_bacterial_mass_value / 8.5) * 100, 100))
     firm_value = phylum_total(data.page2_rows, "2.Firmicutes") or named_total(data.page2_rows, FIRMICUTES_NAMES)
     bact_value = phylum_total(data.page2_rows, "3.Bacteroidetes") or named_total(data.page2_rows, BACTEROIDETES_NAMES)
     bifido_value = row_value(data.page2_rows, "Bifidobacterium spp", "value")
@@ -1923,6 +1928,13 @@ def build_html(
         <div><b>Descripción microscópica</b><br>{stool_micro_html}</div>
       </div>
 
+      <div class="legend-bar standardized-legend"><b>BIOMASA BACTERIANA TOTAL</b><span class="swatch very-low"></span>Muy bajo (&lt;6,0)<span class="swatch low"></span>Disminución clara (&lt;6,5)<span class="swatch good"></span>Leve disminución (6,5-7)<span class="swatch optimal"></span>Adecuado (7-8,5)</div>
+      <div class="taxa-row">
+        <span>TOTAL BACTERIAL MASS</span>
+        <strong>{h(metrics.get('total_bacterial_mass'))}</strong>
+        <div class="range tbm-range"><span class="very-low"></span><span class="low"></span><span class="good"></span><span class="optimal"></span><i style="left:{total_bacterial_mass_marker:.2f}%"></i></div>
+      </div>
+
       <div class="legend-bar diversity-legend"><b>DIVERSIDAD TAXONÓMICA</b><span class="swatch lime"></span>Muy bajo (0-5)<span class="swatch yellow"></span>Bajo (5-13)<span class="swatch green"></span>Óptimo (13-20)</div>
       <div class="taxa-row">
         <span>Diversity, number of taxa:</span>
@@ -1935,11 +1947,11 @@ def build_html(
       <p class="copy">El microbioma intestinal esta dividido en tres grupos bacterianos dominantes, asociados con diferentes perfiles metabólicos y funciones en el organismo. Enterotipo 1 Enterotipo 2 Enterotipo 3. {h(clinical_settings.get('enterotype_text', ''))}</p>
       <div class="enterotype-box">{h(clinical_settings.get('enterotype_number', '1'))}</div>
 
-      <div class="legend-bar"><b>MICROBIOTA BENÉFICA</b><span class="swatch lime"></span>Muy bajo<span class="swatch yellow"></span>Bajo<span class="swatch green"></span>Óptimo</div>
+      <div class="legend-bar standardized-legend"><b>MICROBIOTA BENÉFICA</b><span class="swatch very-low"></span>Muy bajo (&lt;90%)<span class="swatch low"></span>Bajo (90-95%)<span class="swatch good"></span>Bueno (95-98%)<span class="swatch optimal"></span>Óptimo (98-99%)</div>
       <div class="taxa-row normal">
         <span>NORMAL MICROBIOTA</span>
         <strong>{h(metrics.get('normal_microbiota'))}</strong>
-        <div class="range normal-range"><span class="lime"></span><span class="yellow"></span><span class="green"></span><i style="left:92%"></i></div>
+        <div class="range normal-range"><span class="very-low"></span><span class="low"></span><span class="good"></span><span class="optimal"></span><i style="left:{normal_microbiota_marker:.2f}%"></i></div>
       </div>
       <p class="copy">La proporcion bacteriana en el tracto intestinal puede variar considerablemente de persona a persona. Este indicativo refleja el equilibrio cuantitativo de una microbiota benefica y una microbiota potencialmente patogena.</p>
 
