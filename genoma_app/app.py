@@ -929,6 +929,28 @@ def parse_numeric_row(
     }
 
 
+def valid_relative_value(value: Any) -> bool:
+    return isinstance(value, (int, float)) and math.isfinite(float(value)) and 0 <= float(value) <= 1
+
+
+def relative_issue(row: dict[str, Any] | None) -> str:
+    value = row.get("relative") if row else None
+    if isinstance(value, (int, float)) and not valid_relative_value(value):
+        return (
+            f"Porcentaje relativo incompatible ({value * 100:.1f}%). "
+            "Verifique el resultado absoluto y la masa bacteriana total del laboratorio."
+        )
+    return ""
+
+
+def relative_display(row: dict[str, Any] | None) -> str:
+    if relative_issue(row):
+        return "REVISAR DATO"
+    if not row:
+        return "-"
+    return clean_text(row.get("relative_text")) or fmt_pct(row.get("relative"))
+
+
 def extract_page2_rows_from_page(page: pdfplumber.page.Page, catalog: dict[str, list[dict[str, Any]]]) -> list[dict[str, Any]]:
     expected = []
     for row in catalog.get("Resultados", []):
@@ -972,6 +994,8 @@ def row_value(rows: list[dict[str, Any]], name: str, key: str = "relative") -> f
     for row in rows:
         if norm(row["name"]) == name_n:
             value = row.get(key)
+            if key == "relative" and not valid_relative_value(value):
+                return None
             return value if isinstance(value, (int, float)) else None
     return None
 
@@ -1008,7 +1032,7 @@ def calculate_metrics(rows: list[dict[str, Any]]) -> dict[str, str]:
     for row in rows:
         cat = row.get("category")
         rel = row.get("relative")
-        if cat and isinstance(rel, (int, float)):
+        if cat and valid_relative_value(rel):
             by_category[cat] = by_category.get(cat, 0.0) + rel
 
     firm = phylum_total(rows, "2.Firmicutes") or by_category.get("2.Firmicutes") or named_total(rows, FIRMICUTES_NAMES)
@@ -1207,6 +1231,8 @@ def merged_patient_overrides(params: dict[str, list[str]]) -> dict[str, str]:
 
 
 def fmt_pct(value: Any) -> str:
+    if isinstance(value, (int, float)) and not valid_relative_value(value):
+        return "REVISAR DATO"
     if isinstance(value, (int, float)):
         return f"{value * 100:.1f}%"
     return "-"
@@ -1240,7 +1266,7 @@ def category_total(rows: list[dict[str, Any]], category: str) -> float:
     return sum(
         float(row["relative"])
         for row in rows
-        if row.get("category") == category and isinstance(row.get("relative"), (int, float))
+        if row.get("category") == category and valid_relative_value(row.get("relative"))
     )
 
 
@@ -1248,7 +1274,7 @@ def phylum_total(rows: list[dict[str, Any]], phylum: str) -> float:
     return sum(
         float(row["relative"])
         for row in rows
-        if row.get("category_pg1") == phylum and isinstance(row.get("relative"), (int, float))
+        if row.get("category_pg1") == phylum and valid_relative_value(row.get("relative"))
     )
 
 
@@ -1272,11 +1298,13 @@ def phylum_absolute_total(rows: list[dict[str, Any]], phylum: str) -> float:
 def detail_row(rows_map: dict[str, dict[str, Any]], name: str) -> str:
     row = rows_map.get(norm(name), {"name": name})
     absolute = h(row.get("absolute_text") or fmt_abs(row.get("value")))
-    relative = h(row.get("relative_text") or fmt_pct(row.get("relative")))
+    issue = relative_issue(row)
+    relative = h(relative_display(row))
+    row_class = ' class="data-warning"' if issue else ""
     return (
-        f"<tr><td>{h(row.get('name') or name)}</td>"
+        f"<tr{row_class}><td>{h(row.get('name') or name)}</td>"
         f"<td>{absolute}</td><td>{h(row.get('reference') or row.get('absolute_reference') or '')}</td>"
-        f"<td>{relative}</td><td>{h(row.get('reference_pct') or row.get('relative_reference') or '')}</td></tr>"
+        f"<td title=\"{h(issue)}\">{relative}</td><td>{h(row.get('reference_pct') or row.get('relative_reference') or '')}</td></tr>"
     )
 
 
@@ -1393,7 +1421,7 @@ def detail_table(rows: list[dict[str, Any]], groups: list[dict[str, Any]], *, su
 
 def bar_fill(row: dict[str, Any] | None) -> float:
     value = row.get("relative") if row else None
-    if not isinstance(value, (int, float)):
+    if not valid_relative_value(value):
         return 0
     return max(0, min(value * 100, 100))
 
@@ -1483,11 +1511,14 @@ def range_card(rows_map: dict[str, dict[str, Any]], name: str, *, wide: bool = F
     fill = bar_fill(row)
     marker = max(0.5, min(fill, 99))
     ref_low, ref_high = parse_pct_reference(row.get("reference_pct") or row.get("relative_reference") or "")
+    issue = relative_issue(row)
     cls = "range-card wide" if wide else "range-card"
-    value = row.get("relative_text") or fmt_pct(row.get("relative"))
+    if issue:
+        cls += " data-warning"
+    value = relative_display(row)
     reference = row.get("reference_pct") or row.get("relative_reference") or ""
     return f"""
-      <div class="{cls}" style="--value:{marker:.2f}%; --low:{ref_low:.2f}%; --high:{ref_high:.2f}%">
+      <div class="{cls}" title="{h(issue)}" style="--value:{marker:.2f}%; --low:{ref_low:.2f}%; --high:{ref_high:.2f}%">
         <div class="range-title">{h(row.get('name') or name)}</div>
         <div class="range-meta"><span>{h(value)}</span><em>VR {h(reference or '-')}</em></div>
         <div class="mini-range"><i></i><b></b></div>
@@ -1687,9 +1718,14 @@ def build_html(
     )
     bullet_rows = []
     for row in bullets:
-        pct = (row.get("relative") or 0) * 100 if row.get("relative") is not None else (row.get("value") or 0) * 10
+        raw_relative = row.get("relative")
+        relative = row_value([row], row.get("name", ""), "relative")
+        if raw_relative is not None:
+            pct = relative * 100 if relative is not None else 0
+        else:
+            pct = (row.get("value") or 0) * 10
         pct = max(0, min(float(pct or 0), 100))
-        value = fmt_pct(row.get("relative")) if row.get("relative") is not None else h(row.get("value") if row.get("value") is not None else "-")
+        value = relative_display(row) if row.get("relative") is not None else h(row.get("value") if row.get("value") is not None else "-")
         bullet_rows.append(
             f"""
             <div class="bullet-row">
@@ -1703,7 +1739,7 @@ def build_html(
     for row in data.page2_rows[:18]:
         mini_rows.append(
             f"<tr><td>{h(row['name'])}</td><td>{h(row.get('value') if row.get('value') is not None else '-')}</td>"
-            f"<td>{fmt_pct(row.get('relative'))}</td><td>{h(row.get('category'))}</td></tr>"
+            f"<td>{h(relative_display(row))}</td><td>{h(row.get('category'))}</td></tr>"
         )
     patient = dict(data.patient)
     patient.update(patient_overrides or {})
@@ -1974,16 +2010,22 @@ def build_validation_html(pdf: Path, xlsx: Path) -> str:
     found_norm = {norm(row["name"]) for row in data.page2_rows}
     missing = [name for name in expected if norm(name) not in found_norm]
     metrics = calculate_metrics(data.page2_rows)
+    relative_issues = [(row, relative_issue(row)) for row in data.page2_rows if relative_issue(row)]
 
     page1_rows = "\n".join(
         f"<tr><td>{i+1}</td><td>{h(r['name'])}</td><td>{h(r['result'])}</td><td>{h(r['reference'])}</td><td>{h(r['unit'])}</td></tr>"
         for i, r in enumerate(data.page1_rows)
     )
     page2_rows = "\n".join(
-        f"<tr><td>{i+1}</td><td>{h(r['name'])}</td><td>{h(r.get('absolute_text'))}</td><td>{h(r.get('absolute_reference'))}</td>"
-        f"<td>{h(r.get('relative_text'))}</td><td>{h(r.get('relative_reference'))}</td><td>{h(r.get('category'))}</td><td>{h(r.get('raw'))}</td></tr>"
+        f"<tr{' class=\"data-warning\"' if relative_issue(r) else ''}><td>{i+1}</td><td>{h(r['name'])}</td><td>{h(r.get('absolute_text'))}</td><td>{h(r.get('absolute_reference'))}</td>"
+        f"<td>{h(relative_display(r))}</td><td>{h(r.get('relative_reference'))}</td><td>{h(r.get('category'))}</td><td>{h(relative_issue(r) or r.get('raw'))}</td></tr>"
         for i, r in enumerate(data.page2_rows)
     )
+    issue_items = "".join(
+        f"<li><b>{h(row.get('name'))}:</b> absoluto {h(row.get('absolute_text') or '-')}, relativo {h(row.get('relative_text') or '-')}. {h(issue)}</li>"
+        for row, issue in relative_issues
+    ) or "<li>No se detectaron porcentajes fuera del rango 0-100%.</li>"
+    issue_class = " alert" if relative_issues else ""
     missing_rows = "".join(f"<li>{h(name)}</li>" for name in missing) or "<li>Ninguno</li>"
     return f"""<!doctype html>
 <html lang="es">
@@ -2009,6 +2051,10 @@ def build_validation_html(pdf: Path, xlsx: Path) -> str:
       <p><b>Paciente:</b> {h(data.patient.get('Nombre'))} | <b>Sexo:</b> {h(data.patient.get('Sexo'))} | <b>Nacimiento:</b> {h(data.patient.get('Fecha de nacimiento'))} | <b>Muestra:</b> {h(data.patient.get('Fecha de muestra'))}</p>
       <p><b>PAGE001:</b> {len(data.page1_rows)} filas | <b>PAGE002:</b> {len(data.page2_rows)} de {len(expected)} nombres esperados | <b>Faltantes:</b> {len(missing)}</p>
       <p><b>Metricas:</b> Firmicutes/Bacteroidetes = {h(metrics.get('firm_bact'))}; Actino/Proteo = {h(metrics.get('actino_proteo'))}; Prevotella/Bacteroides = {h(metrics.get('prev_bacteroides'))}</p>
+    </section>
+    <section class="validation-card{issue_class}">
+      <h2>Control de porcentajes</h2>
+      <ul>{issue_items}</ul>
     </section>
     <section class="validation-card">
       <h2>Observacion extraida</h2>

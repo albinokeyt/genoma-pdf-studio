@@ -602,6 +602,26 @@ body {
   color: var(--green);
 }
 
+.validation-card.alert {
+  border-color: #b4534b;
+  background: #fff5f3;
+}
+
+.validation-card.alert h2 {
+  color: #8f302b;
+}
+
+.data-warning td,
+.range-card.data-warning {
+  background: #fff2ef !important;
+}
+
+.data-warning td:nth-child(4),
+.range-card.data-warning .range-meta span {
+  color: #9c2925;
+  font-weight: 800;
+}
+
 .validation-card pre {
   margin: 0;
   white-space: pre-wrap;
