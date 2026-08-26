@@ -618,6 +618,7 @@ YEAST_NAMES = [
 
 YEAST_STATUSES = [
     ("no_evaluado", "No evaluado"),
+    ("no_detectado", "No detectado"),
     ("debil", "Débil"),
     ("moderada", "Moderada"),
     ("elevado", "Elevado"),
@@ -625,6 +626,7 @@ YEAST_STATUSES = [
 
 YEAST_STATUS_POSITIONS = {
     "no_evaluado": 0.0,
+    "no_detectado": 0.0,
     "debil": 15.0,
     "moderada": 50.0,
     "elevado": 86.0,
@@ -1160,6 +1162,20 @@ def final_page1_rows(rows: list[dict[str, str]]) -> list[dict[str, str]]:
     ]
 
 
+def apply_page1_detection_fallbacks(page1_rows: list[dict[str, str]], page2_rows: list[dict[str, Any]]) -> None:
+    page1 = page1_lookup(page1_rows)
+    candida_result = norm(page1.get("Candida albicans", {}).get("result", ""))
+    if candida_result not in {"not detected", "no detectado", "no detectada"}:
+        return
+    for row in page2_rows:
+        if norm(row.get("name", "")) == norm("C.albicans"):
+            row["value"] = 0.0
+            row["relative"] = 0.0
+            row["absolute_text"] = "no detectado"
+            row["relative_text"] = "no detectado"
+            break
+
+
 def extract_report(pdf_path: Path, xlsx_path: Path) -> ExtractedReport:
     catalog = load_catalog(xlsx_path)
     with pdfplumber.open(pdf_path) as pdf:
@@ -1171,6 +1187,7 @@ def extract_report(pdf_path: Path, xlsx_path: Path) -> ExtractedReport:
             page1_rows = flatten_page1_tables(pdf.pages[0])
         observation = extract_observation_from_page(pdf.pages[0]) if pdf.pages else ""
         page2_rows = extract_page2_rows_from_page(pdf.pages[1], catalog) if len(pdf.pages) > 1 else []
+        apply_page1_detection_fallbacks(page1_rows, page2_rows)
     return ExtractedReport(
         patient=extract_patient(page1_text + "\n" + page2_text),
         observation=observation,
@@ -1598,6 +1615,52 @@ def pathogen_page(patient: dict[str, str], fondo: str, logo: str) -> str:
     """
 
 
+def report_yeast_records(data: ExtractedReport) -> list[dict[str, str]]:
+    records = load_yeast_profile()
+    candida_result = norm(page1_lookup(data.page1_rows).get("Candida albicans", {}).get("result", ""))
+    if candida_result in {"not detected", "no detectado", "no detectada"}:
+        for record in records:
+            if norm(record.get("name", "")) == norm("Candida albicans") and record.get("status") == "no_evaluado":
+                record.update({"status": "no_detectado", "value": "", "notes": "Extraído del PDF"})
+                break
+    return records
+
+
+def yeast_pdf_summary(data: ExtractedReport) -> str:
+    page1 = page1_lookup(data.page1_rows)
+    total_row = page1.get("Yeast fungi, quantity", {})
+    total_value = clean_text(total_row.get("result", "")).replace("*", "") or "-"
+    total_reference = clean_text(total_row.get("reference", ""))
+    if total_reference in {"", "<"}:
+        total_reference = "< 6.5"
+
+    candida = page2_row(data.page2_rows, "Candida spp")
+    candida_value = candida.get("value")
+    candida_text = clean_text(candida.get("absolute_text")) or fmt_abs(candida_value)
+    candida_reference = clean_text(candida.get("reference") or candida.get("absolute_reference")) or "0.0 - 4.0"
+    candida_status = "Elevado" if isinstance(candida_value, (int, float)) and candida_value > 4.0 else "Dentro del rango"
+    candida_class = "high" if candida_status == "Elevado" else "ok"
+
+    albicans = page2_row(data.page2_rows, "C.albicans")
+    albicans_text = relative_display(albicans)
+    if norm(albicans_text) == norm("no detectado"):
+        albicans_text = "No detectado"
+
+    return f"""
+      <div class="yeast-pdf-summary">
+        <div class="yeast-summary-card neutral">
+          <span>Hongos y levaduras totales</span><strong>{h(total_value)} Lg</strong><em>VR {h(total_reference)}</em>
+        </div>
+        <div class="yeast-summary-card {candida_class}">
+          <span>Candida spp</span><strong>{h(candida_text)} Lg</strong><em>{h(candida_status)} · VR {h(candida_reference)}</em>
+        </div>
+        <div class="yeast-summary-card ok">
+          <span>Candida albicans</span><strong>{h(albicans_text)}</strong><em>Resultado cualitativo</em>
+        </div>
+      </div>
+    """
+
+
 def build_extra_pages(data: ExtractedReport, fondo: str, logo: str) -> str:
     rows = data.page2_rows
     rows_map = row_by_name(rows)
@@ -1659,7 +1722,7 @@ def build_extra_pages(data: ExtractedReport, fondo: str, logo: str) -> str:
         {"title": "ARQUEAS", "rows": ["Methanobrevibacter spp"]},
     ]), catalog=data.catalog)
 
-    yeast_records = load_yeast_profile()
+    yeast_records = report_yeast_records(data)
     yeast_rows = "".join(
         f"<div class='yeast-row yeast-{h(record.get('status'))}'>"
         f"<span>{h(record.get('name'))}<em>{h(record.get('value') or yeast_status_label(record.get('status', '')))}</em></span>"
@@ -1668,7 +1731,8 @@ def build_extra_pages(data: ExtractedReport, fondo: str, logo: str) -> str:
     )
     page8 = f"""
       <div class="range-logo"><img src="{asset_url(logo)}" alt=""></div>
-      <div class="yeast-legend"><b>MICOBIOMA</b><span class="box weak"></span>Débil<span class="box ok"></span>Moderada<span class="box high"></span>Elevado</div>
+      {yeast_pdf_summary(data)}
+      <div class="yeast-legend"><b>MICOBIOMA</b><span class="box none"></span>No detectado<span class="box weak"></span>Débil<span class="box ok"></span>Moderada<span class="box high"></span>Elevado</div>
       <div class="yeast-list">{yeast_rows}</div>
       <div class="range-legend"><span class="box weak"></span>Bajo<span class="box ok"></span>Óptimo<span class="box high"></span>Elevado</div>
       {range_section("ACTINOBACTERIAS", ["Bifidobacterium spp", "Metabolically active bifidobacteria species, proportion", 'Metabolically active "infant" bifidobacteria **', "Bifidobacterium longum subsp. infantis"], rows_map, 2)}

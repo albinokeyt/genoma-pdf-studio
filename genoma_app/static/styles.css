@@ -1746,11 +1746,53 @@ body {
 .box.weak { background: #f0d769; }
 .box.ok { background: #82b98a; }
 .box.high { background: #dfe677; }
+.box.none { background: #edf1ee; }
+
+.yeast-pdf-summary {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin: 0 0 7px;
+}
+
+.yeast-summary-card {
+  min-height: 53px;
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  padding: 6px 9px;
+  border: 1px solid #a8cbaa;
+  border-radius: 8px;
+  background: rgba(255,255,255,.9);
+  color: #244e2d;
+}
+
+.yeast-summary-card.high {
+  border-color: #d1a44d;
+  background: #fff7df;
+  color: #76510c;
+}
+
+.yeast-summary-card span,
+.yeast-summary-card em {
+  font-size: 7.1px;
+  font-style: normal;
+}
+
+.yeast-summary-card strong {
+  font-size: 11px;
+}
+
+.yeast-summary-card em {
+  color: #657368;
+}
 
 .yeast-list {
   position: relative;
   z-index: 1;
-  margin: 5px 42px 22px;
+  margin: 4px 42px 12px;
 }
 
 .yeast-row {
@@ -1758,7 +1800,7 @@ body {
   grid-template-columns: 1fr 190px;
   align-items: center;
   gap: 26px;
-  min-height: 27px;
+  min-height: 25px;
   font-size: 12.2px;
   color: #111;
 }
