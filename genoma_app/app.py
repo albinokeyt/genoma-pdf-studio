@@ -619,9 +619,9 @@ YEAST_NAMES = [
 YEAST_STATUSES = [
     ("no_evaluado", "No evaluado"),
     ("no_detectado", "No detectado"),
-    ("debil", "Débil"),
-    ("moderada", "Moderada"),
-    ("elevado", "Elevado"),
+    ("debil", "Detectado bajo"),
+    ("moderada", "Detectado medio"),
+    ("elevado", "Detectado alto"),
 ]
 
 YEAST_STATUS_POSITIONS = {
@@ -947,7 +947,7 @@ def relative_issue(row: dict[str, Any] | None) -> str:
 
 def relative_display(row: dict[str, Any] | None) -> str:
     if relative_issue(row):
-        return "REVISAR DATO"
+        return "FUERA DE RANGO"
     if not row:
         return "-"
     return clean_text(row.get("relative_text")) or fmt_pct(row.get("relative"))
@@ -1249,7 +1249,7 @@ def merged_patient_overrides(params: dict[str, list[str]]) -> dict[str, str]:
 
 def fmt_pct(value: Any) -> str:
     if isinstance(value, (int, float)) and not valid_relative_value(value):
-        return "REVISAR DATO"
+        return "FUERA DE RANGO"
     if isinstance(value, (int, float)):
         return f"{value * 100:.1f}%"
     return "-"
@@ -1638,8 +1638,8 @@ def yeast_pdf_summary(data: ExtractedReport) -> str:
     candida_value = candida.get("value")
     candida_text = clean_text(candida.get("absolute_text")) or fmt_abs(candida_value)
     candida_reference = clean_text(candida.get("reference") or candida.get("absolute_reference")) or "0.0 - 4.0"
-    candida_status = "Elevado" if isinstance(candida_value, (int, float)) and candida_value > 4.0 else "Dentro del rango"
-    candida_class = "high" if candida_status == "Elevado" else "ok"
+    candida_status = "Detectado alto" if isinstance(candida_value, (int, float)) and candida_value > 4.0 else "Detectado bajo"
+    candida_class = "high" if candida_status == "Detectado alto" else "ok"
 
     albicans = page2_row(data.page2_rows, "C.albicans")
     albicans_text = relative_display(albicans)
@@ -1732,7 +1732,7 @@ def build_extra_pages(data: ExtractedReport, fondo: str, logo: str) -> str:
     page8 = f"""
       <div class="range-logo"><img src="{asset_url(logo)}" alt=""></div>
       {yeast_pdf_summary(data)}
-      <div class="yeast-legend"><b>MICOBIOMA</b><span class="box none"></span>No detectado<span class="box weak"></span>Débil<span class="box ok"></span>Moderada<span class="box high"></span>Elevado</div>
+      <div class="yeast-legend"><b>MICOBIOMA</b><span class="box none"></span>No detectado<span class="box weak"></span>Detectado bajo<span class="box ok"></span>Detectado medio<span class="box high"></span>Detectado alto</div>
       <div class="yeast-list">{yeast_rows}</div>
       <div class="range-legend"><span class="box weak"></span>Bajo<span class="box ok"></span>Óptimo<span class="box high"></span>Elevado</div>
       {range_section("ACTINOBACTERIAS", ["Bifidobacterium spp", "Metabolically active bifidobacteria species, proportion", 'Metabolically active "infant" bifidobacteria **', "Bifidobacterium longum subsp. infantis"], rows_map, 2)}

@@ -1727,12 +1727,20 @@ body {
 
 .yeast-legend {
   justify-content: space-around;
+  gap: 7px;
   min-height: 36px;
+  font-size: 9.4px;
 }
 
 .yeast-legend b {
   font-size: 12.3px;
   line-height: 1.1;
+}
+
+.yeast-legend .box {
+  flex: 0 0 13px;
+  width: 13px;
+  height: 13px;
 }
 
 .box {
